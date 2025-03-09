@@ -4,12 +4,9 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "bitter-lab-f53f",
-	"main": "src/entry.py",
+	"name": "square-art-74f0",
+	"main": "src/index.ts",
 	"compatibility_date": "2025-03-03",
-	"compatibility_flags": [
-		"python_workers"
-	],
 	"observability": {
 		"enabled": true
 	}
