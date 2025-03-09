@@ -12,8 +12,13 @@
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.7.5",
 		"@cloudflare/workers-types": "^4.20250303.0",
+		"@types/qrcode": "^1.5.5",
 		"typescript": "^5.5.2",
 		"vitest": "~3.0.7",
 		"wrangler": "^3.114.0"
+	},
+	"dependencies": {
+		"qrcode": "^1.5.4",
+		"qrcode-generator": "^1.4.4"
 	}
 }

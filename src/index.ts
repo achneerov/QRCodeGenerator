@@ -1,18 +1,124 @@
 /**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
+ * QR Code Generator for Cloudflare Workers using qrcode-generator library
+ * Accepts parameters:
+ * - url: The URL to encode in the QR code
+ * - size: Size of the QR code image (default: 300)
+ * - fgColor: Foreground color in hex (default: 000000)
+ * - bgColor: Background color in hex (default: FFFFFF)
+ * - ecLevel: Error correction level (L, M, Q, H) (default: M)
+ * 
+ * Example usage: /api/qrcode?url=https://example.com&size=400&fgColor=FF0000&bgColor=FFFFFF&ecLevel=H
  */
 
+// Import the QR code generator library
+import qrcode from 'qrcode-generator';
+
+export interface Env {
+  // Add environment variables here if needed
+}
+
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
-	},
-} satisfies ExportedHandler<Env>;
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // Extract and validate parameters
+    const qrUrl = url.searchParams.get('url');
+    if (!qrUrl) {
+      return new Response('Error: URL parameter is required', { status: 400 });
+    }
+    
+    // Parse size parameter (default: 300)
+    const sizeParam = url.searchParams.get('size');
+    const size = sizeParam ? parseInt(sizeParam) : 300;
+    if (isNaN(size) || size < 100 || size > 1000) {
+      return new Response('Error: Size must be between 100 and 1000', { status: 400 });
+    }
+    
+    // Parse color parameters (default: black on white)
+    const fgColor = url.searchParams.get('fgColor') || '000000';
+    const bgColor = url.searchParams.get('bgColor') || 'FFFFFF';
+    
+    // Validate hex colors
+    if (!isValidHexColor(fgColor) || !isValidHexColor(bgColor)) {
+      return new Response('Error: Invalid color format. Use hex format without #', { status: 400 });
+    }
+    
+    // Parse error correction level (default: M)
+    const ecLevelParam = url.searchParams.get('ecLevel') || 'M';
+    if (!['L', 'M', 'Q', 'H'].includes(ecLevelParam)) {
+      return new Response('Error: Error correction level must be L, M, Q, or H', { status: 400 });
+    }
+    
+    // Map string to the correct type expected by the library
+    const ecLevelMap: Record<string, string> = {
+      'L': 'L',
+      'M': 'M',
+      'Q': 'Q',
+      'H': 'H'
+    };
+    
+    try {
+      // Generate QR code using the library
+      // The library will automatically select the appropriate QR code version
+      // based on the data length and error correction level
+      // @ts-ignore - Ignore type checking for the ecLevel parameter
+      const qr = qrcode(0, ecLevelMap[ecLevelParam]);
+      qr.addData(qrUrl);
+      qr.make();
+      
+      // Generate SVG
+      const svg = generateSVG(qr, size, fgColor, bgColor);
+      
+      // Return the SVG image
+      return new Response(svg, {
+        headers: {
+          'Content-Type': 'image/svg+xml',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      return new Response(`Error generating QR code: ${errorMessage}`, { status: 500 });
+    }
+  },
+};
+
+/**
+ * Validates if a string is a valid hex color (without the #)
+ */
+function isValidHexColor(color: string): boolean {
+  return /^[0-9A-Fa-f]{6}$/.test(color);
+}
+
+/**
+ * Generates an SVG representation of the QR code
+ */
+function generateSVG(qr: any, size: number, fgColor: string, bgColor: string): string {
+  const moduleCount = qr.getModuleCount();
+  const quietZone = 4; // Standard quiet zone is 4 modules
+  
+  // Calculate module size to fit the specified output size
+  const moduleSize = size / (moduleCount + 2 * quietZone);
+  
+  // Generate SVG
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">`;
+  
+  // Add background
+  svg += `<rect width="100%" height="100%" fill="#${bgColor}"/>`;
+  
+  // Add QR code modules
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      if (qr.isDark(row, col)) {
+        const x = (col + quietZone) * moduleSize;
+        const y = (row + quietZone) * moduleSize;
+        svg += `<rect x="${x}" y="${y}" width="${moduleSize}" height="${moduleSize}" fill="#${fgColor}"/>`;
+      }
+    }
+  }
+  
+  // Close SVG
+  svg += '</svg>';
+  
+  return svg;
+}
