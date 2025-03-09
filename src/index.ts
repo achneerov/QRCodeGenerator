@@ -1,7 +1,7 @@
 /**
  * QR Code Generator for Cloudflare Workers using qrcode-generator library
  * Accepts parameters:
- * - url: The URL to encode in the QR code
+ * - url: The URL to encode in the QR code (default: https://example.com)
  * - size: Size of the QR code image (default: 300)
  * - fgColor: Foreground color in hex (default: 000000)
  * - bgColor: Background color in hex (default: FFFFFF)
@@ -22,10 +22,7 @@ export default {
     const url = new URL(request.url);
     
     // Extract and validate parameters
-    const qrUrl = url.searchParams.get('url');
-    if (!qrUrl) {
-      return new Response('Error: URL parameter is required', { status: 400 });
-    }
+    const qrUrl = url.searchParams.get('url') || 'https://example.com';
     
     // Parse size parameter (default: 300)
     const sizeParam = url.searchParams.get('size');
