@@ -7,7 +7,7 @@
  * - bgColor: Background color in hex (default: FFFFFF)
  * - ecLevel: Error correction level (L, M, Q, H) (default: M)
  * 
- * Example usage: /api/qrcode?url=https://example.com&size=400&fgColor=FF0000&bgColor=FFFFFF&ecLevel=H
+ * Example usage: https://qrcode.achneerov.workers.dev?url=https://example.com&size=400&fgColor=FF0000&bgColor=FFFFFF&ecLevel=H
  */
 
 // Import the QR code generator library
