@@ -6,8 +6,9 @@
  * - fgColor: Foreground color in hex (default: 000000)
  * - bgColor: Background color in hex (default: FFFFFF)
  * - ecLevel: Error correction level (L, M, Q, H) (default: M)
+ * - borderWidth: Width of the quiet zone border in modules (default: 4)
  * 
- * Example usage: https://qrcode.achneerov.workers.dev?url=https://example.com&size=400&fgColor=FF0000&bgColor=FFFFFF&ecLevel=H
+ * Example usage: https://qrcode.achneerov.workers.dev?url=https://example.com&size=400&fgColor=FF0000&bgColor=FFFFFF&ecLevel=H&borderWidth=2
  */
 
 // Import the QR code generator library
@@ -46,6 +47,13 @@ export default {
       return new Response('Error: Error correction level must be L, M, Q, or H', { status: 400 });
     }
     
+    // Parse border width parameter (default: 4)
+    const borderWidthParam = url.searchParams.get('borderWidth');
+    const borderWidth = borderWidthParam ? parseInt(borderWidthParam) : 4;
+    if (isNaN(borderWidth) || borderWidth < 0 || borderWidth > 20) {
+      return new Response('Error: Border width must be between 0 and 20', { status: 400 });
+    }
+    
     // Map string to the correct type expected by the library
     const ecLevelMap: Record<string, string> = {
       'L': 'L',
@@ -64,7 +72,7 @@ export default {
       qr.make();
       
       // Generate SVG
-      const svg = generateSVG(qr, size, fgColor, bgColor);
+      const svg = generateSVG(qr, size, fgColor, bgColor, borderWidth);
       
       // Return the SVG image
       return new Response(svg, {
@@ -90,9 +98,9 @@ function isValidHexColor(color: string): boolean {
 /**
  * Generates an SVG representation of the QR code
  */
-function generateSVG(qr: any, size: number, fgColor: string, bgColor: string): string {
+function generateSVG(qr: any, size: number, fgColor: string, bgColor: string, borderWidth: number): string {
   const moduleCount = qr.getModuleCount();
-  const quietZone = 4; // Standard quiet zone is 4 modules
+  const quietZone = borderWidth; // Use the custom border width instead of fixed value
   
   // Calculate module size to fit the specified output size
   const moduleSize = size / (moduleCount + 2 * quietZone);
