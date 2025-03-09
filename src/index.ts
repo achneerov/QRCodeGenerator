@@ -74,11 +74,13 @@ export default {
       // Generate SVG
       const svg = generateSVG(qr, size, fgColor, bgColor, borderWidth);
       
-      // Return the SVG image
+      // Return the SVG image with CORS headers
       return new Response(svg, {
         headers: {
           'Content-Type': 'image/svg+xml',
           'Cache-Control': 'public, max-age=86400',
+          'Access-Control-Allow-Origin': '*', // Allow any origin to access this resource
+          'Access-Control-Allow-Methods': 'GET', // Allow GET requests
         },
       });
     } catch (error: unknown) {
