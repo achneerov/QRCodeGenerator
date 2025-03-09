@@ -7,8 +7,9 @@
  * - bgColor: Background color in hex (default: FFFFFF)
  * - ecLevel: Error correction level (L, M, Q, H) (default: M)
  * - borderWidth: Width of the quiet zone border in modules (default: 4)
+ * - format: Output format (svg or png) (default: svg)
  * 
- * Example usage: https://qrcode.achneerov.workers.dev?url=https://example.com&size=400&fgColor=FF0000&bgColor=FFFFFF&ecLevel=H&borderWidth=2
+ * Example usage: https://qrcode.achneerov.workers.dev?url=https://example.com&size=400&fgColor=FF0000&bgColor=FFFFFF&ecLevel=H&borderWidth=2&format=png
  */
 
 // Import the QR code generator library
@@ -54,6 +55,12 @@ export default {
       return new Response('Error: Border width must be between 0 and 20', { status: 400 });
     }
     
+    // Parse format parameter (default: svg)
+    const format = url.searchParams.get('format')?.toLowerCase() || 'svg';
+    if (!['svg', 'png'].includes(format)) {
+      return new Response('Error: Format must be svg or png', { status: 400 });
+    }
+    
     // Map string to the correct type expected by the library
     const ecLevelMap: Record<string, string> = {
       'L': 'L',
@@ -64,25 +71,44 @@ export default {
     
     try {
       // Generate QR code using the library
-      // The library will automatically select the appropriate QR code version
-      // based on the data length and error correction level
       // @ts-ignore - Ignore type checking for the ecLevel parameter
       const qr = qrcode(0, ecLevelMap[ecLevelParam]);
       qr.addData(qrUrl);
       qr.make();
       
-      // Generate SVG
-      const svg = generateSVG(qr, size, fgColor, bgColor, borderWidth);
-      
-      // Return the SVG image with CORS headers
-      return new Response(svg, {
-        headers: {
-          'Content-Type': 'image/svg+xml',
-          'Cache-Control': 'public, max-age=86400',
-          'Access-Control-Allow-Origin': '*', // Allow any origin to access this resource
-          'Access-Control-Allow-Methods': 'GET', // Allow GET requests
-        },
-      });
+      // Generate response based on format
+      if (format === 'svg') {
+        // Generate SVG
+        const svg = generateSVG(qr, size, fgColor, bgColor, borderWidth);
+        
+        // Return the SVG image with CORS headers
+        return new Response(svg, {
+          headers: {
+            'Content-Type': 'image/svg+xml',
+            'Cache-Control': 'public, max-age=86400',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET',
+            'Content-Disposition': `attachment; filename="qrcode.svg"`,
+          },
+        });
+      } else {
+        // For PNG format, we'll use a data URL that the frontend can download
+        // Generate SVG
+        const svg = generateSVG(qr, size, fgColor, bgColor, borderWidth);
+        
+        // Create a data URL that the frontend can download
+        const dataUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+        
+        // Return a JSON response containing the data URL
+        return new Response(JSON.stringify({ dataUrl }), {
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=86400',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET',
+          },
+        });
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return new Response(`Error generating QR code: ${errorMessage}`, { status: 500 });
